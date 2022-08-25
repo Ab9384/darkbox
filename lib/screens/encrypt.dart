@@ -1,26 +1,28 @@
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:darkbox/brand_colors.dart';
-import 'package:darkbox/helper_methods.dart';
-import 'package:darkbox/globalVariable.dart';
-import 'package:darkbox/screens/view_image.dart';
+import 'package:darkbox/widgets/ProgressDailog.dart';
 import 'package:darkbox/widgets/TaxiButton.dart';
+import 'package:darkbox/widgets/alertingDialog.dart';
+import 'package:encrypt/encrypt.dart';
 import 'package:flutter/material.dart';
 import 'package:encrypt/encrypt.dart' as crypto;
-import 'package:path_provider/path_provider.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:provider/provider.dart';
+import '../appdata.dart';
 import '../widgets/chooseImageDialog.dart';
 
 class EncryptScreen extends StatelessWidget {
-  const EncryptScreen({Key? key}) : super(key: key);
+  const EncryptScreen({key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    TextEditingController controller = TextEditingController();
+    TextEditingController nameController = TextEditingController();
     return Scaffold(
       backgroundColor: BrandColors.primaryDark,
       body: SafeArea(
         child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
           child: Padding(
             padding: const EdgeInsets.all(20.0),
             child:
@@ -80,51 +82,60 @@ class EncryptScreen extends StatelessWidget {
               const SizedBox(
                 height: 40,
               ),
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Image.asset(
-                    'images/encrypt.png',
-                    height: 200,
-                  ),
-                  const SizedBox(
-                    height: 20,
-                  ),
-                  const Text(
-                    'Encrypt your data',
-                    style: TextStyle(
-                      fontSize: 20,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
+              Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Image.asset(
+                      'images/encrypt.png',
+                      height: 200,
                     ),
-                  ),
-                  const SizedBox(
-                    height: 40,
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      showDialog(
-                          context: context,
-                          builder: (context) {
-                            return const ChooseImageDialog();
-                          });
-                    },
-                    child: const TaxiButton(
-                      title: 'Choose Image',
-                      iconData: Icons.image,
-                      color: BrandColors.primaryLight,
-                      textColor: Colors.white,
+                    const SizedBox(
+                      height: 20,
                     ),
-                  )
-                ],
+                    const Text(
+                      'Secure your image',
+                      style: TextStyle(
+                        fontSize: 20,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(
+                      height: 40,
+                    ),
+                    (Provider.of<AppData>(context, listen: true).imageFile !=
+                            null)
+                        ? Text(
+                            Provider.of<AppData>(context, listen: true)
+                                .imageFile!
+                                .path,
+                            style: const TextStyle(color: Colors.white),
+                          )
+                        : GestureDetector(
+                            onTap: () {
+                              showDialog(
+                                  context: context,
+                                  builder: (context) {
+                                    return const ChooseImageDialog();
+                                  });
+                            },
+                            child: const TaxiButton(
+                              title: 'Choose Image',
+                              iconData: Icons.image,
+                              color: BrandColors.primaryLight,
+                              textColor: Colors.white,
+                            ),
+                          )
+                  ],
+                ),
               ),
               const SizedBox(
                 height: 40,
               ),
-              // text box
               const Text(
-                'Message',
+                'File Name',
                 style: TextStyle(
                   color: BrandColors.secondary,
                   fontSize: 20,
@@ -136,7 +147,9 @@ class EncryptScreen extends StatelessWidget {
                 height: 15,
               ),
               TextField(
-                maxLines: 7,
+                maxLines: 1,
+                maxLength: 12,
+                controller: nameController,
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 14,
@@ -144,7 +157,8 @@ class EncryptScreen extends StatelessWidget {
                   fontWeight: FontWeight.normal,
                 ),
                 decoration: InputDecoration(
-                  hintText: 'Enter your data',
+                  hintText: 'Enter your secret file name',
+                  counterStyle: const TextStyle(color: Colors.white),
                   hintStyle: TextStyle(
                     color: Colors.white.withOpacity(0.7),
                     fontSize: 15,
@@ -170,6 +184,7 @@ class EncryptScreen extends StatelessWidget {
               const SizedBox(
                 height: 20,
               ),
+
               // secret key text box
               const Text(
                 'Secret Key',
@@ -185,6 +200,8 @@ class EncryptScreen extends StatelessWidget {
               ),
               TextField(
                 maxLines: 1,
+                maxLength: 32,
+                controller: controller,
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 14,
@@ -193,6 +210,7 @@ class EncryptScreen extends StatelessWidget {
                 ),
                 decoration: InputDecoration(
                   hintText: 'Enter your secret key',
+                  counterStyle: const TextStyle(color: Colors.white),
                   hintStyle: TextStyle(
                     color: Colors.white.withOpacity(0.7),
                     fontSize: 15,
@@ -216,21 +234,58 @@ class EncryptScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(
-                height: 50,
+                height: 60,
               ),
               GestureDetector(
                 onTap: () async {
-                  String msg =
-                      encrypt('message', 'my 32 length key................');
-                  Uint16List img =
-                      imageFile!.readAsBytesSync().buffer.asUint16List();
-                  Uint16List encodedImg = img;
-                  Uint16List expandedMsg = expandMsg(msg2bytes(msg));
-                  Uint16List paddedMsg =
-                      padMsg(getEncoderCapacity(img), expandedMsg);
-                  for (int i = 0; i < getEncoderCapacity(img); ++i) {
-                    encodedImg[i] = encodeOnePixel(img[i], paddedMsg[i]);
+                  if (Provider.of<AppData>(context, listen: false).imageFile ==
+                      null) {
+                    Fluttertoast.showToast(msg: 'Please Choose Image file');
+                    return;
                   }
+                  if (nameController.text.isEmpty) {
+                    Fluttertoast.showToast(msg: 'Enter File Name');
+                    return;
+                  }
+                  if (controller.text.length < 32) {
+                    Fluttertoast.showToast(msg: 'Secret key not long enough!');
+                    return;
+                  }
+
+                  Uint8List reposnse =
+                      Provider.of<AppData>(context, listen: false)
+                          .imageFile!
+                          .readAsBytesSync();
+                  // String strlength = 'my 32 length key................';
+                  showDialog(
+                      context: context,
+                      builder: (context) =>
+                          const ProgressDailog(status: 'Creating...'));
+                  var concatenate = StringBuffer();
+                  for (int i = 0; i < reposnse.length; i++) {
+                    concatenate
+                        .write(encrypt(reposnse[i], controller.text) + ',');
+                  }
+
+                  // print(concatenate);
+
+                  //code for decrypting message
+
+                  String finalMessage =
+                      encrypt(concatenate.toString(), controller.text);
+                  Navigator.pop(context);
+                  print(finalMessage);
+                  showDialog(
+                      context: context,
+                      builder: (context) => AlertingDialog(
+                          title: 'Message',
+                          body: finalMessage,
+                          fileName: nameController.text,
+                          textAlign: TextAlign.center));
+                  Provider.of<AppData>(context, listen: false).updateFileNull();
+                  // showDialog(
+                  //     context: context,
+                  //     builder: (context) => ViewImage(image: bytes));
                 },
                 child: const TaxiButton(
                   title: 'Encrypt',
@@ -246,79 +301,24 @@ class EncryptScreen extends StatelessWidget {
     );
   }
 
-  encrypt(var msg, String secretKey) {
+  String encrypt(var msg, String secretKey) {
     crypto.Key key = crypto.Key.fromUtf8(secretKey);
     crypto.IV iv = crypto.IV.fromLength(16);
     crypto.Encrypter encrypter = crypto.Encrypter(crypto.AES(key));
-    crypto.Encrypted encrypted = encrypter.encrypt(msg, iv: iv);
+    crypto.Encrypted encrypted = encrypter.encrypt(msg.toString(), iv: iv);
     msg = encrypted.base64;
     return msg;
   }
 
-  String padCryptionKey(String key) {
-    if (key.length > 32) {
-      throw FlutterError('cryption_key_length_greater_than_32');
-    }
-    String paddedKey = key;
-    int padCnt = 32 - key.length;
-    for (int i = 0; i < padCnt; ++i) {
-      paddedKey += '.';
-    }
-    return paddedKey;
-  }
+  String decrypt(var msg, String secretKey) {
+    crypto.Key key = crypto.Key.fromUtf8(secretKey);
+    crypto.IV iv = crypto.IV.fromLength(16);
+    crypto.Encrypter encrypter = crypto.Encrypter(crypto.AES(key));
+    crypto.Encrypted encrypted = Encrypted.from64(msg);
+    String deMsg = encrypter.decrypt(encrypted, iv: iv);
 
-  Uint16List padToBytes(Uint16List msg) {
-    int padSize = dataLength - msg.length % dataLength;
-    Uint16List padded = Uint16List(msg.length + padSize);
-    for (int i = 0; i < msg.length; ++i) {
-      padded[i] = msg[i];
-    }
-    for (int i = 0; i < padSize; ++i) {
-      padded[msg.length + i] = 0;
-    }
-    return padded;
+    return deMsg;
   }
+  //embed text in image and save it as a new image
 
-  int getEncoderCapacity(Uint16List img) {
-    return img.length;
-  }
-
-  Uint16List msg2bytes(String msg) {
-    return Uint16List.fromList(msg.codeUnits);
-  }
-
-  int getMsgSize(String msg) {
-    Uint16List byteMsg = msg2bytes(msg);
-    return byteMsg.length * dataLength;
-  }
-
-  int encodeOnePixel(int pixel, int msg) {
-    if (msg != 1 && msg != 0) {
-      throw FlutterError('msg_encode_bit_more_than_1_bit');
-    }
-    int lastBitMask = 254;
-    int encoded = (pixel & lastBitMask) | msg;
-    return encoded;
-  }
-
-  Uint16List padMsg(int capacity, Uint16List msg) {
-    Uint16List padded = Uint16List(capacity);
-    for (int i = 0; i < msg.length; ++i) {
-      padded[i] = msg[i];
-    }
-    return padded;
-  }
-
-  Uint16List expandMsg(Uint16List msg) {
-    Uint16List expanded = Uint16List(msg.length * dataLength);
-    for (int i = 0; i < msg.length; ++i) {
-      int msgByte = msg[i];
-      for (int j = 0; j < dataLength; ++j) {
-        int lastBit = msgByte & 1;
-        expanded[i * dataLength + (dataLength - j - 1)] = lastBit;
-        msgByte = msgByte >> 1;
-      }
-    }
-    return expanded;
-  }
 }

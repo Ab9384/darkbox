@@ -13,7 +13,7 @@ class Dashboard extends StatelessWidget {
       backgroundColor: BrandColors.primaryDark,
       body: SafeArea(
           child: Padding(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
           child: Column(
@@ -31,7 +31,7 @@ class Dashboard extends StatelessWidget {
               Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: Color(0xff2c3958),
+                  color: const Color(0xff2c3958),
                   borderRadius: BorderRadius.circular(30),
                 ),
                 child: Padding(
@@ -61,9 +61,9 @@ class Dashboard extends StatelessWidget {
                               )),
                           const SizedBox(height: 30),
                           Text(
-                              'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.',
+                              'Protecting privacy is key to ensuring human dignity, safety and self-determination\n\nOnce you\'ve lost your privacy, you realize you\'ve lost an extremely valuable thing.\n\nIf you agree with us use Darkbox to share your image secretly',
                               style: TextStyle(
-                                color: Colors.white.withOpacity(0.7),
+                                color: Colors.white.withOpacity(0.8),
                                 fontSize: 13,
                                 fontStyle: FontStyle.normal,
                                 fontWeight: FontWeight.bold,

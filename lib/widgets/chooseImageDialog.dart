@@ -1,10 +1,9 @@
 import 'dart:io';
-
+import 'package:darkbox/appdata.dart';
 import 'package:darkbox/brand_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import '../globalVariable.dart';
-import 'ProgressDailog.dart';
+import 'package:provider/provider.dart';
 
 class ChooseImageDialog extends StatelessWidget {
   const ChooseImageDialog({Key? key}) : super(key: key);
@@ -17,10 +16,9 @@ class ChooseImageDialog extends StatelessWidget {
         source: imageSource,
         imageQuality: 40,
       );
-
-      imageFile = File(pickedFile!.path);
+      Provider.of<AppData>(context, listen: false)
+          .updateImageFile(File(pickedFile!.path));
       Navigator.pop(context);
-      return imageFile;
     }
 
     return Dialog(

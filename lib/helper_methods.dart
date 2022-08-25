@@ -1,9 +1,5 @@
-import 'dart:io';
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:loading_indicator/loading_indicator.dart';
-import 'package:open_file/open_file.dart';
 
 import 'brand_colors.dart';
 
@@ -32,9 +28,9 @@ class HelperMethods {
 
   /// Helper function to encode one bit of message into 8 pixels
 
-  static Future openFile(File file) async {
-    final url = file.path;
+  // static Future openFile(File file) async {
+  //   final url = file.path;
 
-    await OpenFile.open(url);
-  }
+  //   await OpenFile.open(url);
+  // }
 }

@@ -1,24 +1,32 @@
-import 'package:darkbox/brand_colors.dart';
-import 'package:darkbox/widgets/TaxiButton.dart';
-import 'package:flutter/material.dart';
+import 'dart:io';
+import 'dart:typed_data';
 
-import '../widgets/chooseImageDialog.dart';
+import 'package:darkbox/brand_colors.dart';
+import 'package:darkbox/screens/view_image.dart';
+import 'package:darkbox/widgets/ProgressDailog.dart';
+import 'package:darkbox/widgets/TaxiButton.dart';
+import 'package:encrypt/encrypt.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
+import 'package:encrypt/encrypt.dart' as crypto;
+import 'package:flutter/services.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 class Decrypt extends StatefulWidget {
-  const Decrypt({Key? key}) : super(key: key);
+  const Decrypt({key}) : super(key: key);
 
   @override
   State<Decrypt> createState() => _DecryptState();
 }
 
 class _DecryptState extends State<Decrypt> {
+  TextEditingController message = TextEditingController();
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: BrandColors.primaryDark,
       body: SafeArea(
         child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
           child: Padding(
             padding: const EdgeInsets.all(20.0),
             child:
@@ -78,50 +86,55 @@ class _DecryptState extends State<Decrypt> {
               const SizedBox(
                 height: 40,
               ),
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Image.asset(
-                    'images/decrypt.png',
-                    height: 200,
-                  ),
-                  const SizedBox(
-                    height: 20,
-                  ),
-                  const Text(
-                    'Decrypt your data',
-                    style: TextStyle(
-                      fontSize: 20,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
+              Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Image.asset(
+                      'images/decrypt.png',
+                      height: 200,
                     ),
-                  ),
-                  const SizedBox(
-                    height: 40,
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      showDialog(
-                          context: context,
-                          builder: (context) {
-                            return const ChooseImageDialog();
-                          });
-                    },
-                    child: const TaxiButton(
-                      title: 'Choose Image',
-                      iconData: Icons.image,
-                      color: BrandColors.primaryLight,
-                      textColor: Colors.white,
+                    const SizedBox(
+                      height: 20,
                     ),
-                  )
-                ],
+                    const Text(
+                      'Reveal secret data',
+                      style: TextStyle(
+                        fontSize: 20,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(
+                      height: 40,
+                    ),
+                    // GestureDetector(
+                    //   onTap: () {
+                    //     showDialog(
+                    //         context: context,
+                    //         builder: (context) {
+                    //           return const ChooseImageDialog();
+                    //         });
+                    //   },
+                    //   child: const TaxiButton(
+                    //     title: 'Choose Image',
+                    //     iconData: Icons.image,
+                    //     color: BrandColors.primaryLight,
+                    //     textColor: Colors.white,
+                    //   ),
+                    // )
+                  ],
+                ),
               ),
               const SizedBox(
                 height: 40,
               ),
               // text box
 
+              const SizedBox(
+                height: 20,
+              ),
               // secret key text box
               const Text(
                 'Secret Key',
@@ -133,10 +146,13 @@ class _DecryptState extends State<Decrypt> {
                 ),
               ),
               const SizedBox(
-                height: 15,
+                height: 25,
               ),
               TextField(
                 maxLines: 1,
+                maxLength: 32,
+                maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                controller: message,
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 14,
@@ -145,6 +161,7 @@ class _DecryptState extends State<Decrypt> {
                 ),
                 decoration: InputDecoration(
                   hintText: 'Enter your secret key',
+                  counterStyle: const TextStyle(color: Colors.white),
                   hintStyle: TextStyle(
                     color: Colors.white.withOpacity(0.7),
                     fontSize: 15,
@@ -168,13 +185,51 @@ class _DecryptState extends State<Decrypt> {
                 ),
               ),
               const SizedBox(
-                height: 50,
+                height: 60,
               ),
-              const TaxiButton(
-                title: 'Decrypt',
-                textColor: Colors.white,
-                color: BrandColors.secondary,
-                widget: 'images/decrypt.png',
+              GestureDetector(
+                onTap: () async {
+                  if (message.text.length < 32) {
+                    Fluttertoast.showToast(msg: 'Secret key not long enough!');
+                    return;
+                  }
+                  FilePickerResult? result =
+                      await FilePicker.platform.pickFiles(
+                    type: FileType.custom,
+                    allowedExtensions: ['txt'],
+                  );
+                  if (result != null) {
+                    showDialog(
+                        context: context,
+                        builder: (context) => const ProgressDailog(
+                              status: 'Please Wait...',
+                            ));
+                    File file = File(result.files.single.path!);
+                    String text = file.readAsStringSync();
+                    List<String> encryptedMessage = [];
+                    // String strlength = 'my 32 length key................';
+                    String messageList = decrypt(text, message.text);
+                    encryptedMessage = messageList.toString().split(',');
+                    List<int> unit = [];
+                    for (int i = 0; i < encryptedMessage.length - 1; i++) {
+                      unit.add(int.parse(
+                          decrypt(encryptedMessage[i], message.text)));
+                    }
+                    Uint8List bytes = Uint8List.fromList(unit);
+                    Navigator.pop(context);
+                    showDialog(
+                        context: context,
+                        builder: (context) => ViewImage(image: bytes));
+                  } else {
+                    // User canceled the picker
+                  }
+                },
+                child: const TaxiButton(
+                  title: 'Decrypt',
+                  textColor: Colors.white,
+                  color: BrandColors.secondary,
+                  widget: 'images/decrypt.png',
+                ),
               )
             ]),
           ),
@@ -182,4 +237,28 @@ class _DecryptState extends State<Decrypt> {
       ),
     );
   }
+
+  String decrypt(var msg, String secretKey) {
+    crypto.Key key = crypto.Key.fromUtf8(secretKey);
+    crypto.IV iv = crypto.IV.fromLength(16);
+    crypto.Encrypter encrypter = crypto.Encrypter(crypto.AES(key));
+    crypto.Encrypted encrypted = Encrypted.from64(msg);
+    String deMsg = encrypter.decrypt(encrypted, iv: iv);
+
+    return deMsg;
+  }
+
+  // Future<int> readCounter() async {
+  //   try {
+  //     final file = await _localFile;
+
+  //     // Read the file
+  //     final contents = await file.readAsString();
+
+  //     return int.parse(contents);
+  //   } catch (e) {
+  //     // If encountering an error, return 0
+  //     return 0;
+  //   }
+  // }
 }
